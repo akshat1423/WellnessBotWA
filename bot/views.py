@@ -10,6 +10,28 @@ from .models import UserGist
 from .charts import UserQueryLineChartJSONView
 from django.urls import path
 
+import matplotlib.pyplot as plt
+def queries_over_time(request):
+    # Group UserQuery by date of creation
+    datewise_queries = UserQuery.objects.dates('created_at', 'day')
+
+    dates = []
+    counts = []
+    for date in datewise_queries:
+        dates.append(date)
+        counts.append(UserQuery.objects.filter(created_at__date=date).count())
+
+    plt.plot(dates, counts)
+    plt.xlabel('Date')
+    plt.ylabel('Number of Queries')
+    plt.title('Queries over Time')
+    plt.grid(True)
+    plt.tight_layout()
+
+    response = HttpResponse(content_type="image/png")
+    plt.savefig(response, format="png")
+    return response
+
 
 # ############################3
 # import datetime as dt
@@ -60,7 +82,6 @@ from django.urls import path
 
 ##############################3
 #important api keys and  Details
-
 
 
 client = Client(account_sid, auth_token)
