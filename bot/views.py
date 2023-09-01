@@ -6,8 +6,62 @@ import openai
 import tiktoken
 import os
 from .models import UserQuery 
+from .models import UserGist
+from .charts import UserQueryLineChartJSONView
+from django.urls import path
 
+
+# ############################3
+# import datetime as dt
+# import json
+# from secrets import compare_digest
+
+# from django.conf import settings
+# from django.db.transaction import atomic, non_atomic_requests
+# from django.http import HttpResponse, HttpResponseForbidden
+# from django.views.decorators.csrf import csrf_exempt
+# from django.views.decorators.http import require_POST
+# from django.utils import timezone
+
+# from .models import AcmeWebhookMessage
+
+
+# @csrf_exempt
+# @require_POST
+# @non_atomic_requests
+# def acme_webhook(request):
+#     given_token = request.headers.get("VerifyToken", "")
+#     print("meatyhamhock",given_token)
+#     # if not compare_digest(given_token, "abc123"):
+#     #     return HttpResponseForbidden(
+#     #         "Incorrect token in Acme-Webhook-Token header.",
+#     #         content_type="text/plain",
+#     #     )
+
+#     AcmeWebhookMessage.objects.filter(
+#         received_at__lte=timezone.now() - dt.timedelta(days=7)
+#     ).delete()
+#     payload = json.loads(request.body)
+#     AcmeWebhookMessage.objects.create(
+#         received_at=timezone.now(),
+#         payload=payload,
+#     )
+#     process_webhook_payload(payload)
+#     return HttpResponse("Message received okay.", content_type="text/plain")
+
+
+# @atomic
+# def process_webhook_payload(payload):
+#      print(payload)
+
+
+
+
+
+##############################3
 #important api keys and  Details
+
+
 
 client = Client(account_sid, auth_token)
 
@@ -25,15 +79,15 @@ def bot(request):
         temperature=0,
     )
         return response.choices[0].message["content"]
-    def get_completion_from_messages(messages, 
-                                 model="gpt-3.5-turbo", 
-                                 temperature=0, 
+    def get_completion_from_messages(messages,
+                                 model="gpt-3.5-turbo",
+                                 temperature=0,
                                  max_tokens=500):
         response = openai.ChatCompletion.create(
         model=model,
         messages=messages,
         temperature=temperature, # this is the degree of randomness of the model's output
-        max_tokens=max_tokens, # the maximum number of tokens the model can ouptut 
+        max_tokens=max_tokens, # the maximum number of tokens the model can ouptut
     )
         return response.choices[0].message["content"]
     def split_string(text, chunk_size=1300):
@@ -58,13 +112,13 @@ def bot(request):
                 body=f"🌿 Oops! Your message was a bit short.  🤔  🌱 Could you please elaborate a little more? \n 🌼 *Start your message with \"Hello\" or \"Hi\"* so we can dig deeper into your herbal health and wellness journey. 🍃🌸"
         )
     def doctor():
-            messages_doctor =  [  
+            messages_doctor =  [
             {'role':'system',
-            'content':"""Answer within 150 words . give answer in the formed of numbered list. You are an anceint medicine practitioner , your skills include Ayurvedic Doctor , Yoga Teacher, Nutritionalist / Dietician , Gym Trainer . You have to decide which among your skills can suit to best help your clients problem , give him herbal and natural solutions not having to use any artificial medicines. """},    
+            'content':"""Answer within 150 words . give answer in the formed of numbered list. You are an anceint medicine practitioner , your skills include Ayurvedic Doctor , Yoga Teacher, Nutritionalist / Dietician , Gym Trainer . You have to decide which among your skills can suit to best help your clients problem , give him herbal and natural solutions not having to use any artificial medicines. """},
             {'role':'user',
             'content':f"""{message_from_user}"""},
-            ] 
-            response_doctor = get_completion_from_messages(messages_doctor, 
+            ]
+            response_doctor = get_completion_from_messages(messages_doctor,
                                                     temperature =1)
             header_response_doctor="✨🌿 *This is the Answer from our Ayurvedic Bot:* 🌱✨\n\n"
             response_doctor_splitted = split_string(response_doctor, chunk_size)
@@ -76,8 +130,7 @@ def bot(request):
             )
             return combined_response_doctor
     def product():
-        
-            messages_product =  [  
+            messages_product =  [
             {'role':'system',
             'content':"""Have total Answer within 150 words. Suggest a product from the below dictionary products = {
                 "KIWI SLOW ORGANIC CLOVE": "https://www.kisanwindow.com/product-detail/15",
@@ -99,7 +152,7 @@ def bot(request):
             {'role':'user',
             'content':f"""Suggest me some food items because {message_from_user} also send me ingredients with their links to buy """},
             ]
-            response_product = get_completion_from_messages(messages_product, 
+            response_product = get_completion_from_messages(messages_product,
                                                     temperature =1)
             header_response_product="🌿🌼 *These are the herbal products we suggest for your path to wellness:* 🌱💚\n\n"
             response_product_splitted = split_string(response_product, chunk_size)
@@ -110,24 +163,79 @@ def bot(request):
             body=combined_response_product
             )
             return combined_response_product
-    def pipeline():
-        if not message_from_user_start1 and  not message_from_user_start2:
-            intro()
-        if len(message_from_user)<10:
-            short_message()
-        if message_from_user_start1 or message_from_user_start2:
-            processing()
-            doctor_response = doctor()  # Modify the doctor function to return the response
-            product_response = product()  # Modify the product function to return the response
+    def gist():
+        gist =  [
+            {'role':'system',
+            'content':"""Answer within 20 words . Summarize the user problem """},
+            {'role':'user',
+            'content':f"""{message_from_user}"""},
+            ]
+        response_gist = get_completion_from_messages(gist,
+                                                    temperature =1)
 
-            UserQuery.objects.create(
-            user_message=message_from_user,
-            doctor_response=doctor_response,
-            product_response=product_response
+        return response_gist
+
+    def pipeline():
+        # Check if the phone number has sent messages before
+        phone_number = '+917990565567'  # replace with actual phone number from request
+        existing_query = UserQuery.objects.filter(phone_no_from=phone_number).first()
+        flag="none"
+        new=0
+        intro_num=0
+        # Prepare reply based on the existing query
+        if existing_query:
+            existing_query.message_count += 1
+            existing_query.save()
+            flag = f"This is your {existing_query.message_count} message."
+        else:
+            reply = ("🎉 Heyyya! 🌟 Welcome to our Platform! 🎊\n"
+                   "👋 We're *THRILLED* you're here!\n\n"
+                   "💡 Ready to explore something AMAZING? We've got a universe of cool stuff just waiting for you. 🌌\n"
+                   "👇 So what are you waiting for? Dive in and let's make some magic happen! 🎩✨\n\n"
+                   " \n\n👉 What's troubling you today?\n📝 "
+                   "📝 *Note*: To get started, please initiate your queries with the phrase 'Hello' or 'Hi'. 👋")
+            message_reply = client.messages.create(
+            from_='whatsapp:+14155238886',
+            to='whatsapp:+917990565567',
+            body=reply
             )
-    pipeline()  
+            new=1
+
+        if (new==0) and (not message_from_user_start1 and not message_from_user_start2):
+            intro()
+            intro_num=1
+        if (new==0) and (intro_num==0) and (len(message_from_user) < 10):
+            short_message()
+        if (new==0) and (intro_num==0) and ((len(message_from_user) > 10) and (message_from_user_start1 or message_from_user_start2)):
+            message_reply = client.messages.create(
+            from_='whatsapp:+14155238886',
+            to='whatsapp:+917990565567',
+            body=flag)
+            processing()
+            doctor_response = doctor()
+            product_response = product()
+            gist_response = gist()
+            message_reply = client.messages.create(
+            from_='whatsapp:+14155238886',
+            to='whatsapp:+917990565567',
+            body="Did this solve your query, if not send your query again starting with \"Hi\" or \"Hello\""
+            )
+            UserQuery.objects.create(
+                user_message=message_from_user,
+                doctor_response=doctor_response,
+                product_response=product_response,
+                phone_no_from=phone_number,
+                gist=gist_response,
+                message_count=existing_query.message_count if existing_query else 1
+            )
+            UserGist.objects.create(
+                phone_no_from=phone_number,
+                gist=gist_response
+            )
+    pipeline()
     return HttpResponse("Message sent")
-    
+
+
 
 
 #Code With Intelligent OpenAI Analysis
