@@ -37,16 +37,16 @@
             color: white;
         }
         /* Different row colors based on response type */
-        .know {
+        .state1 {
             background-color: #1cc5a78a;
         }
-        .query {
+        .state2 {
             background-color: #d9f9d9;
         }
-        .feedback {
+        .state3 {
             background-color: #f9d9d9;
         }
-        .short {
+        .state4 {
             background-color: #d9d9f9;
         }
         /* Graph styling */
@@ -109,33 +109,45 @@
         <thead>
             <tr>
                 <th><input type="text" class="filter" data-column="0" placeholder="Id" style="width: 20px;"></th>
-                <th><input type="text" class="filter" data-column="1" placeholder="Filter User Message"></th>
-                <th><input type="text" class="filter" data-column="2" placeholder="Filter Doctor Response"></th>
-                <th><input type="text" class="filter" data-column="3" placeholder="Filter Product Response"></th>
+                <th><input type="text" class="filter" data-column="1" placeholder="Filter User Name"></th>
+
+                <th><input type="text" class="filter" data-column="2" placeholder="Filter User Message"></th>
+                <th><input type="text" class="filter" data-column="3" placeholder="Filter Response"></th>
+                {% comment %} <th><input type="text" class="filter" data-column="3" placeholder="Filter Product Response"></th> {% endcomment %}
                 <th><input type="text" class="filter" data-column="4" placeholder="Filter Gist"></th>
-                <th style="width: 80px;"><input type="text" class="filter" data-column="5" placeholder="Filter Response Type" style="width: 80px;"></th>
-                <th><input type="text" class="filter" data-column="6" placeholder="Filter Created At" style="width: 80px;"></th>
+                {% comment %} <th style="width: 80px;"><input type="text" class="filter" data-column="5" placeholder="Filter Response Type" style="width: 80px;"></th> {% endcomment %}
+                <th><input type="text" class="filter" data-column="5" placeholder="Filter Created At" style="width: 80px;"></th>
+                <th><input type="text" class="filter" data-column="6" placeholder="State" style="width: 20px;"></th>
+
             </tr>
             <tr>
                 <th>Message Id</th>
+                <th>Name</th>
                 <th>User Message</th>
-                <th>Doctor Response</th>
-                <th>Product Response</th>
+                <th>Response</th>
+                {% comment %} <th>Product Response</th> {% endcomment %}
                 <th>Gist</th>
-                <th>Response Type</th> <!-- New Column -->
+                {% comment %} <th>Response Type</th> <!-- New Column --> {% endcomment %}
                 <th>Created At</th>
+                <th>Current State</th>
+
             </tr>
         </thead>
         <tbody>
+            {% comment %} console.log({{all_messages}}) {% endcomment %}
             {% for message in all_messages %}
+            
             <tr>
                 <td style="width: 20px;">{{ message.message_internal_id  }}</td>
+                <td style="width: 20px;">{{ message.profile_name  }}</td>
                 <td class="user-message">{{ message.user_message }}</td>
                 <td>{{ message.doctor_response }}</td>
-                <td>{{ message.product_response }}</td>
+                {% comment %} <td>{{ message.product_response }}</td> {% endcomment %}
                 <td>{{ message.gist }}</td>
-                <td>{{ message.response_message_segregation }}</td> <!-- New Column -->
+                {% comment %} <td>{{ message.response_message_segregation }}</td> <!-- New Column --> {% endcomment %}
                 <td>{{ message.created_at }}</td>
+                <td style="width: 20px;">{{ message.currentstate  }}</td>
+
             </tr>
             {% endfor %}
         </tbody>
@@ -207,18 +219,24 @@ function draw(words) {
     });
 
     // Count types of responses
-    let know_count = 0;
+    let welcome_coint = 0;
     let query_count = 0;
+    let yoga_count = 0;
+    let prod_count = 0;
+    let ayur_count = 0;
+    let new_count = 0;
     let feedback_count = 0;
-    let short_count = 0;
 
     $("tbody tr").each(function() {
-        const responseType = $(this).find("td:eq(5)").text().toLowerCase();
-        if (responseType === "know") know_count++;
-        if (responseType === "query") query_count++;
-        if (responseType === "feedback") feedback_count++;
-        if (responseType === "short") short_count++;
-        $(this).addClass(responseType);
+        const responseType = $(this).find("td:eq(6)").text().toLowerCase();
+        if (responseType === "1") welcome_coint++;
+        if (responseType === "2") query_count++;
+        if (responseType === "3") ayur_count++;
+        if (responseType === "4") yoga_count++;
+        if (responseType === "5") prod_count++;
+        if (responseType === "-999") new_count++;
+        if (responseType === "10") feedback_count++;
+        $(this).addClass("state"+responseType);
     });
 
     // Create Pie Chart
@@ -226,9 +244,9 @@ function draw(words) {
     const pieChart = new Chart(pieCtx, {
         type: 'pie',
         data: {
-            labels: ['Know', 'Query', 'Feedback', 'Short'],
+            labels: ['1', '2', '3', '4','5','-999','10'],
             datasets: [{
-                data: [know_count, query_count, feedback_count, short_count],
+                data: [welcome_coint, query_count, ayur_count,yoga_count,prod_count, new_count, feedback_count],
                 backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4CAF50']
             }]
         }

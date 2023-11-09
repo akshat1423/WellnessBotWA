@@ -1,4 +1,5 @@
 from django.shortcuts import render
+import matplotlib.pyplot as plt
 from django.http import HttpResponse
 from twilio.rest import Client
 from django.views.decorators.csrf import csrf_exempt
@@ -13,10 +14,22 @@ import requests
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 import os
+import time
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.conf import settings
+import jsonify
+from heyoo import WhatsApp
+
+messenger = WhatsApp(token="EAAMHMentXhsBO4YpKleEZCbMIYVVjoyzHnMN2UqvtMbZB8ZCwWe1KOrTEkqux5LOgALRqqaYFFMfu78FDfZCXqZBK3ZCqY5HZCsZCADjgmrcqICsfeuvuY23xjgscgxwfSKAIbeP5MwtGMX8BZAk7jqFZBCkZCuZCjCevIVqvit0ZCt8TZAgO1vOgBUWr7pgr2PkBEvZCuyKlaCctQ2XAsqfLPUl2O5t1Kp9JcZD",phone_number_id="138583586012407")
+
+
+
+
 def dashboard(request):
     all_messages = UserQuery.objects.all()
     return render(request, 'dashboard.html', {'all_messages': all_messages})
-
 credentials_info= {
   "type": "service_account",
   "project_id": "healthbot-398209",
@@ -30,15 +43,12 @@ credentials_info= {
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/chatbot%40healthbot-398209.iam.gserviceaccount.com",
   "universe_domain": "googleapis.com"
 }
-
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
 credentials = Credentials.from_service_account_info(credentials_info, scopes=scopes)
 service = build('sheets', 'v4', credentials=credentials)
 sheet = service.spreadsheets()
 SPREADSHEET_ID = '1fEwoiOWj7CCn3ZArtLr4qp9jpqocaSU1spia0jjFSyw'
 SHEET_NAME = 'bot_data'
-
-import matplotlib.pyplot as plt
 def queries_over_time(request):
     # Group UserQuery by date of creation
     datewise_queries = UserQuery.objects.dates('created_at', 'day')
@@ -59,11 +69,14 @@ def queries_over_time(request):
     response = HttpResponse(content_type="image/png")
     plt.savefig(response, format="png")
     return response
-
 openai.api_key = "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"
-account_sid = 'AC359100564d47ce122c997e907f9dc800'
-auth_token = '7472723ba5f6ffd13476c8bdcd4860c6'
-client = Client(account_sid, auth_token)
+#Development Account
+# account_sid = 'AC359100564d47ce122c997e907f9dc800'
+# auth_token = '7472723ba5f6ffd13476c8bdcd4860c6'
+#Production Account
+# account_sid='ACa11021a29ca5245213d79d5b4b970fa3'
+# auth_token='0a0166c99295675905b95272370c8b45'
+# client = Client(account_sid, auth_token)
 def get_completion(prompt, model="gpt-3.5-turbo"):
         messages = [{"role": "user", "content": prompt}]
         response = openai.ChatCompletion.create(
@@ -89,8 +102,9 @@ def split_string(text, chunk_size=1300):
 
 
 
-
 @csrf_exempt
+# @require_http_methods(["GET"])
+
  #is the user asking a query about is health ? answer in json format with answer:  just yes or no , User gist : "gist of his query" ,
     #this will give us json if yes or no health (implement in going for the loop of processing )  ??
     #intention will act as the main medium for us to send into different loop by checking like =="query"
@@ -102,289 +116,507 @@ def split_string(text, chunk_size=1300):
     #add integration of sheets for all their data
     #make a new dashboard for them
 def bot(request):
+    # if (request.GET.get('hub.mode') == 'subscribe' and
+    #         request.GET.get('hub.verify_token') == settings.VERIFY_TOKEN):
+    #         return HttpResponse(request.GET.get('hub.challenge'))
+            
+    # else:
+    #         return HttpResponse('Error, invalid token', status=403)
+    try:
+        bodyy=json.loads(request.body.decode('utf-8'))
+        # print(bodyy.entry[0].changes[0].value.metadata.phone_number_id)
+        # print(json.dumps(bodyy, indent=2))
+        # print(bodyy['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
+    # )
+        
+        # response = messenger.send_button(
+        #     recipient_id="917990565567",
+        #     button={
+        #         "header": bodyy['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']+"gfg",
+        #         "body": "Body Testing",
+        #         "footer": "Footer Testing",
+        #         "action": {
+        #             "button": "Button Testing",
+        #             "sections": [
+        #                 {
+        #                     "title": "iBank",
+        #                     "rows": [
+        #                         {"id": "row 1", "title": "Send Money", "description": ""},
+        #                         {
+        #                             "id": "row 2",
+        #                             "title": "Withdraw money",
+        #                             "description": "",
+        #                         },
+        #                     ],
+        #                 }
+        #             ],
+        #         },
+        #     },
+        # )
+        # # hell=bodyy("object")
+        # # print(hell)
+        
 
-    #initialisation
-    message_from_user = "None"
-    doctor_response = "None"  # Initialize with a default value
-    product_response = "None"
-    phone_no_from = "None"
-    profile_name = "None"
-    gist_response = "None"
-    message_count = 0
-    #initialisation
+       
+        
 
-
-    product_message_prompt="""Have total Answer within 150 words. Suggest a product  from the below dictionary alsi try the ratio to be 3 kiwi products, 1 amazon , 1 qtrove  products = {
-                    "KIWI SLOW ORGANIC CLOVE": "https://www.kisanwindow.com/product-detail/15",
-                    "ORGANIC OLIVE OIL POMACE 500ML": "https://www.kisanwindow.com/product-detail/22",
-                    "KIWI KASHMIRI KAHWA": "https://www.kisanwindow.com/product-detail/2",
-                    "STRONG COFFEE": "https://www.kisanwindow.com/product-detail/3",
-                    "KIWI SAFFRON": "https://www.kisanwindow.com/product-detail/4",
-                    "KIWI SLOW OLIVE OIL EXTRA VIRGIN": "https://www.kisanwindow.com/product-detail/5",
-                    "KIWI SLOW ORGANIC TURMERIC POWDER": "https://www.kisanwindow.com/product-detail/6",
-                    "KIWI SLOW ORGANIC BLACK PEPPER": "https://www.kisanwindow.com/product-detail/7",
-                    "KIWI SLOW ORGANIC BLACK RICE": "https://www.kisanwindow.com/product-detail/8",
-                    "KIWI SLOW ORGANIC BROWN BASMATI RICE": "https://www.kisanwindow.com/product-detail/9",
-                    "KIWI SLOW ORGANIC CARDAMOM BLACK": "https://www.kisanwindow.com/product-detail/10",
-                    "KIWI SLOW ORGANIC CARDAMOM GREEN": "https://www.kisanwindow.com/product-detail/11",
-                    "KIWI SLOW ORGANIC CASHEW": "https://www.kisanwindow.com/product-detail/12",
-                    "KIWI SLOW ORGANIC CINNAMON POWDER": "https://www.kisanwindow.com/product-detail/13",
-                    "Avimee Herbal Keshpallav Hair Oil For Men And Women": "https://www.amazon.in/Avimee-Keshpallav-Reduces-dandruff-Promotes/dp/B0B6W5KCRM/ref=sr_1_10?keywords=Herbal+Products&sr=8-10",
-                    "Kiwi Slow Organic Almonds": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Almonds/dp/B07SWJHYNP?ref_=ast_sto_dp",
-                    "Kiwi Kashmiri Kahwa": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Almonds/dp/B07SWJHYNP?ref_=ast_sto_dp",
-                    "Strong coffee": "https://www.amazon.in/Kiwi-Kisan-Window-Strong-Coffee/dp/B07TZJ27VJ?ref_=ast_sto_dp",
-                    "Kiwi Slow Olive Oil Extra Virgin": "https://www.amazon.in/Kisan-Window-Organic-Olive-Virgin/dp/B07TB4TVW6?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Black Pepper": "https://www.amazon.in/Kisan-Window-Organic-Black-Pepper/dp/B07T46J1G9?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Black Rice": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Black/dp/B07T58NG9L?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Brown Basmati Rice": "https://www.amazon.in/Kisan-Window-Organic-Brown-Basmati/dp/B07T7VHQ3V?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Cardamom Black": "https://www.amazon.in/Kisan-Window-Organic-Cardamom-Black/dp/B07T7MTNZ7?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Cardamom Green": "https://www.amazon.in/Kisan-Window-Organic-Cardamom-Green/dp/B07TB72LFT?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Cashew": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Cashew/dp/B07SVJ2Y3J?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Cinnamon Powder": "https://www.amazon.in/Kisan-Window-Organic-Cinnamon-Powder/dp/B07TB5NXNT?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Cinnamon Whole": "https://www.amazon.in/Kisan-Window-Organic-Cinnamon-Whole/dp/B07TB4BVXB?ref_=ast_sto_dp",
-                    "Kiwi Slow Organic Clove": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Clove/dp/B07V1DZ53H?ref_=ast_sto_dp",
-                    "Organic Cold Pressed Extra Virgin Coconut Oil 250ml": "https://www.qtrove.com/products/organic-cold-pressed-extra-virgin-coconut-oil-250ml",
-                    "Organic Groundnut Oil 500ml": "https://www.qtrove.com/products/organic-groundnut-oil-500ml",
-                    "Organic Mustard Oil 500ml": "https://www.qtrove.com/products/organic-mustard-oil-500ml",
-                    "Organic Olive Oil Pomace 500ml": "https://www.qtrove.com/products/kiwi-slow-organic-olive-oil-pomace-500ml",
-                    "Organic Sunflower Oil 500ml": "https://www.qtrove.com/products/organic-sunflower-oil-500ml",
-                    "Organic Red Rice 500g": "https://www.qtrove.com/products/organic-red-rice-500g",
-                    "Organic Cumin Seeds 200g": "https://www.qtrove.com/products/organic-cumin-seeds-200g-pack-of-2200gm-2",
-                    "Organic Fennel Seeds 100g": "https://www.qtrove.com/products/organic-fennel-seeds-100g-pack-of-3100gm-3",
-                    "Organic Fenugreek Seeds 150g": "https://www.qtrove.com/products/organic-fenugreek-seeds-150g-pack-of-3150gm-3",
-                    "Organic Flax Seeds 250g": "https://www.qtrove.com/products/organic-flax-seeds-250g-pack-of-3250gm-3",
-                    "Crunchy Millet Muesli 300g": "https://www.qtrove.com/products/crunchy-millet-muesli",
-                    "Diet Millet Muesli 300g": "https://www.qtrove.com/products/diet-millet-muesli",
-                    "Fruity Muesli 300g": "https://www.qtrove.com/products/fruity-muesli",
-                    "Oats (Instant) 500g": "https://www.qtrove.com/products/oats-instant-500g-pack-of-2-500-2",
-                    "Oats (Rolled) 500g": "https://www.qtrove.com/products/oats-rolled-500g-pack-of-2500-2",
-                    "Ragi Banana Flakes 250g": "https://www.qtrove.com/products/banana-ragi-flakes",
-                    "Ragi Flakes 250g": "https://www.qtrove.com/products/ragi-flakes"
-                    Strict instructions:  Dont describe yourself. Answer within 150 words .
-                }"""
-    phone_no_from = "+" + request.POST['WaId']   # replace with actual phone number from request
-    message_from_user = request.POST.get("Body")
-    profile_name = request.POST['ProfileName']
-    chunk_size = 1350
-
-
-
-    # message = client.messages.create(
-    #         body=str(request.POST),
-    #         from_='whatsapp:+14155238886',
-    #         to=f"whatsapp:{phone_no_from}",
-    #     )
-    def send_twilio_message(to, body):
-        message = client.messages.create(
-            body=body,
-            from_='whatsapp:+14155238886',
-            to=f"whatsapp:{to}"
-        )
-        return message.sid
-    def intro():
-         message_intro = client.messages.create(
+        #initialisation
+        message_from_user = "None"
+        doctor_response = "None"  # Initialize with a default value
+        product_response = "None"
+        phone_no_from = "None"
+        profile_name = "None"
+        gist_response = "None"
+        message_count = 0
+        #initialisation
+        product_message_prompt="""Have total Answer within 80 words. Suggest a product  from the below dictionary alsi try the ratio to be 3 kiwi products, 1 amazon , 1 qtrove  products = {
+                        "KIWI SLOW ORGANIC CLOVE": "https://www.kisanwindow.com/product-detail/15",
+                        "ORGANIC OLIVE OIL POMACE 500ML": "https://www.kisanwindow.com/product-detail/22",
+                        "KIWI KASHMIRI KAHWA": "https://www.kisanwindow.com/product-detail/2",
+                        "STRONG COFFEE": "https://www.kisanwindow.com/product-detail/3",
+                        "KIWI SAFFRON": "https://www.kisanwindow.com/product-detail/4",
+                        "KIWI SLOW OLIVE OIL EXTRA VIRGIN": "https://www.kisanwindow.com/product-detail/5",
+                        "KIWI SLOW ORGANIC TURMERIC POWDER": "https://www.kisanwindow.com/product-detail/6",
+                        "KIWI SLOW ORGANIC BLACK PEPPER": "https://www.kisanwindow.com/product-detail/7",
+                        "KIWI SLOW ORGANIC BLACK RICE": "https://www.kisanwindow.com/product-detail/8",
+                        "KIWI SLOW ORGANIC BROWN BASMATI RICE": "https://www.kisanwindow.com/product-detail/9",
+                        "KIWI SLOW ORGANIC CARDAMOM BLACK": "https://www.kisanwindow.com/product-detail/10",
+                        "KIWI SLOW ORGANIC CARDAMOM GREEN": "https://www.kisanwindow.com/product-detail/11",
+                        "KIWI SLOW ORGANIC CASHEW": "https://www.kisanwindow.com/product-detail/12",
+                        "KIWI SLOW ORGANIC CINNAMON POWDER": "https://www.kisanwindow.com/product-detail/13",
+                        "Avimee Herbal Keshpallav Hair Oil For Men And Women": "https://www.amazon.in/Avimee-Keshpallav-Reduces-dandruff-Promotes/dp/B0B6W5KCRM/ref=sr_1_10?keywords=Herbal+Products&sr=8-10",
+                        "Kiwi Slow Organic Almonds": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Almonds/dp/B07SWJHYNP?ref_=ast_sto_dp",
+                        "Kiwi Kashmiri Kahwa": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Almonds/dp/B07SWJHYNP?ref_=ast_sto_dp",
+                        "Strong coffee": "https://www.amazon.in/Kiwi-Kisan-Window-Strong-Coffee/dp/B07TZJ27VJ?ref_=ast_sto_dp",
+                        "Kiwi Slow Olive Oil Extra Virgin": "https://www.amazon.in/Kisan-Window-Organic-Olive-Virgin/dp/B07TB4TVW6?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Black Pepper": "https://www.amazon.in/Kisan-Window-Organic-Black-Pepper/dp/B07T46J1G9?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Black Rice": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Black/dp/B07T58NG9L?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Brown Basmati Rice": "https://www.amazon.in/Kisan-Window-Organic-Brown-Basmati/dp/B07T7VHQ3V?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Cardamom Black": "https://www.amazon.in/Kisan-Window-Organic-Cardamom-Black/dp/B07T7MTNZ7?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Cardamom Green": "https://www.amazon.in/Kisan-Window-Organic-Cardamom-Green/dp/B07TB72LFT?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Cashew": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Cashew/dp/B07SVJ2Y3J?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Cinnamon Powder": "https://www.amazon.in/Kisan-Window-Organic-Cinnamon-Powder/dp/B07TB5NXNT?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Cinnamon Whole": "https://www.amazon.in/Kisan-Window-Organic-Cinnamon-Whole/dp/B07TB4BVXB?ref_=ast_sto_dp",
+                        "Kiwi Slow Organic Clove": "https://www.amazon.in/Kiwi-Kisan-Window-Organic-Clove/dp/B07V1DZ53H?ref_=ast_sto_dp",
+                        "Organic Cold Pressed Extra Virgin Coconut Oil 250ml": "https://www.qtrove.com/products/organic-cold-pressed-extra-virgin-coconut-oil-250ml",
+                        "Organic Groundnut Oil 500ml": "https://www.qtrove.com/products/organic-groundnut-oil-500ml",
+                        "Organic Mustard Oil 500ml": "https://www.qtrove.com/products/organic-mustard-oil-500ml",
+                        "Organic Olive Oil Pomace 500ml": "https://www.qtrove.com/products/kiwi-slow-organic-olive-oil-pomace-500ml",
+                        "Organic Sunflower Oil 500ml": "https://www.qtrove.com/products/organic-sunflower-oil-500ml",
+                        "Organic Red Rice 500g": "https://www.qtrove.com/products/organic-red-rice-500g",
+                        "Organic Cumin Seeds 200g": "https://www.qtrove.com/products/organic-cumin-seeds-200g-pack-of-2200gm-2",
+                        "Organic Fennel Seeds 100g": "https://www.qtrove.com/products/organic-fennel-seeds-100g-pack-of-3100gm-3",
+                        "Organic Fenugreek Seeds 150g": "https://www.qtrove.com/products/organic-fenugreek-seeds-150g-pack-of-3150gm-3",
+                        "Organic Flax Seeds 250g": "https://www.qtrove.com/products/organic-flax-seeds-250g-pack-of-3250gm-3",
+                        "Crunchy Millet Muesli 300g": "https://www.qtrove.com/products/crunchy-millet-muesli",
+                        "Diet Millet Muesli 300g": "https://www.qtrove.com/products/diet-millet-muesli",
+                        "Fruity Muesli 300g": "https://www.qtrove.com/products/fruity-muesli",
+                        "Oats (Instant) 500g": "https://www.qtrove.com/products/oats-instant-500g-pack-of-2-500-2",
+                        "Oats (Rolled) 500g": "https://www.qtrove.com/products/oats-rolled-500g-pack-of-2500-2",
+                        "Ragi Banana Flakes 250g": "https://www.qtrove.com/products/banana-ragi-flakes",
+                        "Ragi Flakes 250g": "https://www.qtrove.com/products/ragi-flakes"
+                        Strict instructions:  Dont describe yourself. Answer within 150 words .
+                    }"""
+        # phone_no_from =  bodyy['entry'][0]['changes'][0]['value']['messages'][0]['from']  # replace with actual phone number from request
+        message_from_user = bodyy['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
+        profile_name = bodyy['entry'][0]['changes'][0]['value']['contacts'][0]['profile']['name']
+        chunk_size = 1350
+        
+        # print(phone_no_from)
+    #     response = messenger.send_message(
+    #     message="https://www.youtube.com/watch?v=K4TOrB7at0Y",
+    #     recipient_id="917990565567",
+    # )
+        # def messanger(body):
+        #     message_reply = client.messages.create(
+        #             from_='whatsapp:+14155238886',
+        #             to=f"whatsapp:{phone_no_from}",
+        #             body=body
+        #             )
+        #     return message_reply.sid 
+        def messangerbot(body):
+            response = messenger.send_message(
+            message=(body),
+            recipient_id="917990565567",
+    )
+        def intro():
+            messangerbot(f"🌿 Welcome to G.O.A.T, {profile_name} your go-to Wellness and Health Bot! 🤖\n🌱 We specialize in Herbal and Ayurvedic solutions, offering you a path to complete natural wellness. 🌼\n What's troubling you today?")
+                    # body=f"Welcome to the Health and Wellness Assistant! To assist you better, may I know your name, please?"
+        def processing():
+            message1 = client.messages.create(
                 from_='whatsapp:+14155238886',
                 to=f"whatsapp:{phone_no_from}",
-                body=f"🌿 Welcome to G.O.A.T, {profile_name} your go-to Wellness and Health Bot! 🤖\n🌱 We specialize in Herbal and Ayurvedic solutions, offering you a path to complete natural wellness. 🌼\n What's troubling you today?"
-                # body=f"Welcome to the Health and Wellness Assistant! To assist you better, may I know your name, please?"
-        )
-    def processing():
-         message1 = client.messages.create(
-            from_='whatsapp:+14155238886',
-            to=f"whatsapp:{phone_no_from}",
-            body=f"🌿 We're brewing up some herbal wisdom for you! 🍵 Please hang tight while we find the perfect natural solution for your wellness query. 🌱✨"
-        )
-    def short_message():
-         message_error = client.messages.create(
+                body=f"🌿 We're brewing up some herbal wisdom for you! 🍵 Please hang tight while we find the perfect natural solution for your wellness query. 🌱✨"
+            )
+        def short_message():
+            message_error = client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=f"whatsapp:{phone_no_from}",
+                    body=f"🌿 Oops! Your message was a bit short.  🤔  🌱 Could you please elaborate a little more? \n 🌼 "
+            )
+        def doctor():
+            messages_doctor =  [
+            {'role':'system',
+            'content':"""Answer within 150 words . give answer in the formed of numbered list. You are a bot based on the intellect of anceint medicine practitioner , your skills include Ayurvedic Doctor , Yoga Teacher, Nutritionalist / Dietician , Gym Trainer . You have to decide which among your skills can suit to best help your clients problem , give him herbal and natural solutions not having to use any artificial medicines. You have to pose as a doctor and take the query as a doctor and respond to the patient with your prompt .Strict instructions:  Dont describe yourself.  Dont say words like i am aciennt medicine practitioner. Answer within a 150 words limit """},
+            {'role':'user',
+            'content':f"""{message_from_user}"""},
+            ]
+            ctr1=0
+            while True:
+                ctr1=ctr1+1
+                print("doctor")
+                response_doctor = get_completion_from_messages(messages_doctor, temperature=1)
+                if len(response_doctor) <= 1300:
+                    break  # Exit the loop if the response is within the character limit
+
+
+            # Combine header and response
+            header_response_doctor="✨🌿 *This is the Answer from our Ayurvedic Bot:* 🌱✨\n\n"
+            response_doctor_splitted = split_string(response_doctor, chunk_size)
+            combined_response_doctor=header_response_doctor+response_doctor_splitted[0]
+            print(combined_response_doctor)
+            # Send the WhatsApp message
+            messages_doctor = client.messages.create(
                 from_='whatsapp:+14155238886',
                 to=f"whatsapp:{phone_no_from}",
-                body=f"🌿 Oops! Your message was a bit short.  🤔  🌱 Could you please elaborate a little more? \n 🌼 "
-        )
-    def doctor():
-        messages_doctor =  [
-        {'role':'system',
-        'content':"""Answer within 150 words . give answer in the formed of numbered list. You are a bot based on the intellect of anceint medicine practitioner , your skills include Ayurvedic Doctor , Yoga Teacher, Nutritionalist / Dietician , Gym Trainer . You have to decide which among your skills can suit to best help your clients problem , give him herbal and natural solutions not having to use any artificial medicines. You have to pose as a doctor and take the query as a doctor and respond to the patient with your prompt .Strict instructions:  Dont describe yourself.  Dont say words like i am aciennt medicine practitioner. Answer within a 150 words limit """},
-        {'role':'user',
-        'content':f"""{message_from_user}"""},
-        ]
-        ctr1=0
-        while True:
-            ctr1=ctr1+1
-            print("doctor")
-            response_doctor = get_completion_from_messages(messages_doctor, temperature=1)
-            if len(response_doctor) <= 1300:
-                break  # Exit the loop if the response is within the character limit
+                body=combined_response_doctor
+            )
+
+            return combined_response_doctor 
+        def ayurved(message):
+            messages_doctor =  [
+            {'role':'system',
+            'content':"""Answer within 50 words . give answer in the formed of numbered list. You are a bot based on the intellect of anceint medicine practitioner , your skills include Ayurvedic Doctor  give him herbal and natural solutions not having to use any artificial medicines. You have to pose as a doctor and take the query as a doctor and respond to the patient with your prompt .Strict instructions:  Dont describe yourself.  Dont say words like i am aciennt medicine practitioner. Answer within a 50 words limit """},
+            {'role':'user',
+            'content':f"""{message}"""},
+            ]
+            ctr1=0
+            while True:
+                ctr1=ctr1+1
+                print("doctor")
+                response_doctor = get_completion_from_messages(messages_doctor, temperature=1)
+                if len(response_doctor) <= 1300:
+                    break  # Exit the loop if the response is within the character limit
 
 
-        # Combine header and response
-        header_response_doctor="✨🌿 *This is the Answer from our Ayurvedic Bot:* 🌱✨\n\n"
-        response_doctor_splitted = split_string(response_doctor, chunk_size)
-        combined_response_doctor=header_response_doctor+response_doctor_splitted[0]
-        print(combined_response_doctor)
-        # Send the WhatsApp message
-        messages_doctor = client.messages.create(
-            from_='whatsapp:+14155238886',
-            to=f"whatsapp:{phone_no_from}",
-            body=combined_response_doctor
-        )
+            # Combine header and response
+            header_response_doctor="✨🌿 *This is the Answer from our Ayurvedic Bot:* 🌱✨\n\n"
+            response_doctor_splitted = split_string(response_doctor, chunk_size)
+            combined_response_doctor=header_response_doctor+response_doctor_splitted[0]
+            print(combined_response_doctor)
+            # Send the WhatsApp message
+            messages_doctor = client.messages.create(
+                from_='whatsapp:+14155238886',
+                to=f"whatsapp:{phone_no_from}",
+                body=combined_response_doctor
+            )
 
-        return combined_response_doctor
-    def product():
-        # messages_product_approve =  [
-        # {'role':'system',
-        # 'content':"""Can this query be answered by this - Answer in just "yes" or "no" -  Query which a bot based on the intellect of anceint medicine practitioner , your skills include Ayurvedic Doctor , Yoga Teacher, Nutritionalist / Dietician , Gym Trainer  can reply  """},
-        # {'role':'user',
-        # 'content':f"""{message_from_user}"""},
-        # ]
-        # response_product_approve = get_completion_from_messages(messages_product_approve, temperature=1)
-        # message_product = client.messages.create(
-        #         from_='whatsapp:+14155238886',
-        #         to=f"whatsapp:{phone_no_from}",
-        #         body=response_product_approve
-        #     )
-        # if 'yes' in response_product_approve:
-        messages_product =  [
-                {'role':'system',
-                'content':f"""{product_message_prompt}"""},
-                {'role':'user',
-                'content':f"""Suggest me some food items because {message_from_user} also send me ingredients with their links to buy """},
-                ]
-        combined_response_product=""
-        while True:
+            return combined_response_doctor
+        def yoga(message):
+            messages_doctor =  [
+            {'role':'system',
+            'content':"""Answer within 50 words . give answer in the formed of numbered list. You are a bot based on the intellect of anceint medicine practitioner , your skills Yoga Teacher, Tell him yoga poses  You have to pose as a doctor and take the query as a doctor and respond to the patient with your prompt .Strict instructions:  Dont describe yourself.  Dont say words like i am aciennt medicine practitioner. Answer within a 50 words limit """},
+            {'role':'user',
+            'content':f"""{message}"""},
+            ]
+            ctr1=0
+            while True:
+                ctr1=ctr1+1
+                print("doctor")
+                response_doctor = get_completion_from_messages(messages_doctor, temperature=1)
+                if len(response_doctor) <= 1300:
+                    break  # Exit the loop if the response is within the character limit
+
+
+            # Combine header and response
+            header_response_doctor="✨🌿 *This is the Answer from our Yoga Bot:* 🌱✨\n\n"
+            response_doctor_splitted = split_string(response_doctor, chunk_size)
+            combined_response_doctor=header_response_doctor+response_doctor_splitted[0]
+            print(combined_response_doctor)
+            # Send the WhatsApp message
+            messages_doctor = client.messages.create(
+                from_='whatsapp:+14155238886',
+                to=f"whatsapp:{phone_no_from}",
+                body=combined_response_doctor
+            )
+
+            return combined_response_doctor
+        def product(message):
+            # messages_product_approve =  [
+            # {'role':'system',
+            # 'content':"""Can this query be answered by this - Answer in just "yes" or "no" -  Query which a bot based on the intellect of anceint medicine practitioner , your skills include Ayurvedic Doctor , Yoga Teacher, Nutritionalist / Dietician , Gym Trainer  can reply  """},
+            # {'role':'user',
+            # 'content':f"""{message_from_user}"""},
+            # ]
+            # response_product_approve = get_completion_from_messages(messages_product_approve, temperature=1)
+            # message_product = client.messages.create(
+            #         from_='whatsapp:+14155238886',
+            #         to=f"whatsapp:{phone_no_from}",
+            #         body=response_product_approve
+            #     )
+            # if 'yes' in response_product_approve:
+            messages_product =  [
+                    {'role':'system',
+                    'content':f"""{product_message_prompt}"""},
+                    {'role':'user',
+                    'content':f"""Suggest me some food items because {message} also send me ingredients with their links to buy within 60 words"""},
+                    ]
+            combined_response_product=""
+            # while True:
             response_product = get_completion_from_messages(messages_product, temperature=1)
                 # Check if 'www.kisanwindow' is in the response
             print("product")
-            if ('www.kisanwindow' in response_product or 'qtrove.com' in response_product or 'amazon' in response_product) and (len(response_product) <= 1300) :
-                break  # Exit the loop if the condition is met
-
+            # if ('www.kisanwindow' in response_product or 'qtrove.com' in response_product or 'amazon' in response_product) and (len(response_product) <= 1300) :
             # Split and combine the response if needed
             header_response_product="🌿🌼 *These are the herbal products we suggest for your path to wellness:* 🌱💚\n\n"
             response_product_splitted = split_string(response_product, chunk_size)
             combined_response_product = header_response_product + response_product_splitted[0]
 
             # Send the WhatsApp message
-        message_product = client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=f"whatsapp:{phone_no_from}",
-                body=combined_response_product
-            )
-        # else:
-        #     combined_response_product="User Gave a question irrelevant to our BOT"
-        return combined_response_product
+            message_product = client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=f"whatsapp:{phone_no_from}",
+                    body=combined_response_product
+                )
+            # else:
+            #     combined_response_product="User Gave a question irrelevant to our BOT"
+            return combined_response_product
+        def gist():
+            gist =  [
+                {'role':'system',
+                'content':"""Answer within 20 words . Summarize the user problem """},
+                {'role':'user',
+                'content':f"""{message_from_user}"""},
+                ]
+            response_gist = get_completion_from_messages(gist,
+                                                        temperature =1)
 
-    def gist():
-        gist =  [
-            {'role':'system',
-            'content':"""Answer within 20 words . Summarize the user problem """},
-            {'role':'user',
-            'content':f"""{message_from_user}"""},
+            return response_gist
+        def update_database_and_sheet(user_message, doctor_response, product_response, response_message_segregation,
+                                phone_no_from, profile_name, gist_response, message_count, sheet, currentstate):
+            Query = UserQuery.objects.create(
+                user_message=user_message,
+                doctor_response=doctor_response,
+                product_response=product_response,
+                response_message_segregation=response_message_segregation,
+                phone_no_from=phone_no_from,
+                profile_name=profile_name,
+                gist=gist_response,
+                message_count=message_count,
+                currentstate=currentstate
+            )
+            Query.save()
+            message_internal_id = Query.message_internal_id
+            # Create UserGist object with conditional check
+            UserGist.objects.create(
+                phone_no_from=phone_no_from if phone_no_from else "None",
+                gist=gist_response if gist_response else "None"
+            )
+
+            data = [
+                message_internal_id,
+                user_message,
+                response_message_segregation,
+                doctor_response,
+                product_response,
+                phone_no_from,
+                profile_name,
+                gist_response,
+                message_count,
+                currentstate
             ]
-        response_gist = get_completion_from_messages(gist,
-                                                    temperature =1)
 
-        return response_gist
-    def update_database_and_sheet(user_message, doctor_response, product_response, response_message_segregation,
-                              phone_no_from, profile_name, gist_response, message_count, sheet):
-        Query = UserQuery.objects.create(
-            user_message=user_message,
-            doctor_response=doctor_response,
-            product_response=product_response,
-            response_message_segregation=response_message_segregation,
-            phone_no_from=phone_no_from,
-            profile_name=profile_name,
-            gist=gist_response,
-            message_count=message_count
-        )
-        Query.save()
-        message_internal_id = Query.message_internal_id
-        # Create UserGist object with conditional check
-        UserGist.objects.create(
-            phone_no_from=phone_no_from if phone_no_from else "None",
-            gist=gist_response if gist_response else "None"
-        )
-
-        data = [
-            message_internal_id,
-            user_message,
-            response_message_segregation,
-            doctor_response,
-            product_response,
-            phone_no_from,
-            profile_name,
-            gist_response,
-            message_count
-        ]
-
-        # Append data to the sheet
-        request = sheet.values().append(
-            spreadsheetId=SPREADSHEET_ID,
-            range=f"{SHEET_NAME}!A1",  # Update this based on where you want to start appending data
-            body={
-                'values': [data]
-            },
-            valueInputOption="RAW"
-        )
-        response = request.execute()
-
-    def pipeline():
-        # Check if the phone number has sent messages before
-        existing_query = UserQuery.objects.filter(phone_no_from=phone_no_from).first()
-
-        # Prepare reply based on the existing query
-        if existing_query:
-            existing_query.message_count += 1
-            message_count = existing_query.message_count
-            existing_query.save()
-        else:
-            message_count=2
-            reply = ("🎉 Heyyya! "+profile_name+", 🌟 Welcome to our Platform! 🎊\n"
-                    "👋 We're *THRILLED* you're here!\n"
-                    "💡 Ready to explore something AMAZING? We've got a universe of cool stuff just waiting for you. 🌌\n"
-                    "👇 So what are you waiting for? Dive in and let's make some magic happen! 🎩\n"
-                    "👉 What's troubling you today?📝")
-            message_reply = client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=f"whatsapp:{phone_no_from}",
-                body=reply
+            # Append data to the sheet
+            request = sheet.values().append(
+                spreadsheetId=SPREADSHEET_ID,
+                range=f"{SHEET_NAME}!A1",  # Update this based on where you want to start appending data
+                body={
+                    'values': [data]
+                },
+                valueInputOption="RAW"
             )
-
-        messages_segregation =  [
-            {'role':'system',
-            'content':"""intention : "what user wants to do from the following category(respond in one word) : "is the user asking a query about is health ? then say "query"/(if want to know about platform or feels new user say = know)/"want to give feedback or exit or has finished with his questions say feedback/short(if less then 10 characters)""  """},
-            {'role':'user',
-            'content':f"""{message_from_user}"""},
-            ]
-        response_message_segregation = get_completion_from_messages(messages_segregation, temperature=1)
-        print(response_message_segregation)
-        if response_message_segregation.lower() == "know":
-            intro()
-            gist_response = gist()
-            update_database_and_sheet(message_from_user, "None", "None", response_message_segregation,
-                                    phone_no_from, profile_name, gist_response, message_count, sheet)
-        elif (len(message_from_user) < 10) or response_message_segregation.lower() == "short":
-            short_message()
-            gist_response = gist()
-            update_database_and_sheet(message_from_user, "None", "None", "short",
-                                    phone_no_from, profile_name, gist_response, message_count, sheet)
-        elif response_message_segregation.lower() == "query":
-            processing()
-            doctor_response = doctor()
-            product_response = product()
-            gist_response = gist()
-            update_database_and_sheet(message_from_user, doctor_response, product_response, response_message_segregation,
-                                    phone_no_from, profile_name, gist_response, message_count, sheet)
-        elif response_message_segregation.lower() == "feedback":
-            gist_response = gist()
-            message_reply = client.messages.create(
-            from_='whatsapp:+14155238886',
-            to=f"whatsapp:{phone_no_from}",
-            body="Thanks for using our Bot!"
-            )
-            update_database_and_sheet(message_from_user, "None", "None", response_message_segregation,
-                                    phone_no_from, profile_name, gist_response, message_count, sheet)
-
-    pipeline()
-
-    return HttpResponse("Message sent")
+            response = request.execute()
+        def pipeline():
+            messages_segregation =  [
+                {'role':'system',
+                'content':"""intention : "what user wants to do from the following category(respond in one word) : "is the user asking a query about is health ? then say "query"/(if want to know about platform or feels new user say = know)/"want to give feedback or exit or has finished with his questions say feedback/short(if less then 10 characters)""  """},
+                {'role':'user',
+                'content':f"""{message_from_user}"""},
+                ]
+            response_message_segregation = get_completion_from_messages(messages_segregation, temperature=1)
+            print(response_message_segregation)
+            
 
 
+            # Check if the phone number has sent messages before
+
+            existing_query = UserQuery.objects.filter(phone_no_from=phone_no_from).first()
+
+            # Prepare reply based on the existing query
+            if existing_query:
+                existing_query.message_count += 1
+                message_count = existing_query.message_count
+                existing_query.save()
+            else:
+                message_count=2
+                reply = ("🎉 Heyyya! "+profile_name+", 🌟 Welcome to our Platform! 🎊\n"
+                        "👋 We're *THRILLED* you're here!\n"
+                        "💡 Ready to explore something AMAZING? We've got a universe of cool stuff just waiting for you. 🌌\n"
+                        "👇 So what are you waiting for? Dive in and let's make some magic happen! 🎩\n"
+                        "👉 What's troubling you today?📝")
+                messangerbot(reply)
+                
+
+            global currentstate;
+            if UserQuery.objects.filter(phone_no_from=phone_no_from).order_by('-message_internal_id').first().currentstate:
+                currentstate=UserQuery.objects.filter(phone_no_from=phone_no_from).order_by('-message_internal_id').first().currentstate
+            else:
+                currentstate=-999  
+            print("now",currentstate)
+
+            # if (len(message_from_user) < 10) or response_message_segregation.lower() == "short":
+            #     short_message()
+            #     gist_response = gist()
+            #     update_database_and_sheet(message_from_user, "None", "None", "short",
+            #                             phone_no_from, profile_name, gist_response, message_count, sheet)
+            if response_message_segregation.lower() == "feedback":
+                gist_response = gist()
+                messangerbot("Thanks for using our Bot!")
+                currentstate=-999
+                update_database_and_sheet(message_from_user, "None", "None", response_message_segregation,
+                                        phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+
+            elif (currentstate==-999 or currentstate==0):
+                intro()
+                gist_response = gist()
+                currentstate=1
+                update_database_and_sheet(message_from_user, "None", "None", response_message_segregation,
+                                        phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+            elif currentstate==1:
+                #i will listen to the problem and ask do you need ayurvedic remedy , yoga poses , or product suggestions to aid the problem
+                messangerbot("Do you need ayurvedic remedy , yoga poses , or product suggestions to aid the problem ")
+                gist_response = gist()
+                currentstate=2
+                update_database_and_sheet(message_from_user, "None", "None", response_message_segregation,
+                                        phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+            
+            elif currentstate==2: #chooser
+                query_chooser =  [
+                {'role':'system',
+                'content':"""intention : "what user wants to do from the following category(respond in one word) :
+                "is the user asking a query to be answered in ayurvedic ? then say "3"/
+                if the user wants to be answered with yoga poses= "4"/
+                user wants to know products to heal him ="5" , "exit/feedback" ="10" , "if not specified any of the above specifiically"="3" """},
+                {'role':'user',
+                'content':f"""{message_from_user}"""},
+                ]
+                gist_response = gist()
+                response_query_chooser = get_completion_from_messages(query_chooser, temperature=1)
+                currentstate=int(response_query_chooser)
+                update_database_and_sheet(message_from_user, "This is segregation step", "None", response_message_segregation,
+                                        phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+
+                message=UserQuery.objects.filter(phone_no_from=phone_no_from,currentstate=2).order_by('-message_internal_id').first().user_message
+                # print(message)
+                if currentstate==3:#ayurvedic
+                    processing()
+                    print(message)
+                    resp=ayurved(message)
+                    time.sleep(10)
+                    messangerbot("Do you need further ayurvedic remedy or do you need yoga poses or product suggestion or you are done and want to say bye to Ayur " )
+                    currentstate=2
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user, resp, "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+                elif currentstate==4:
+                    processing()
+                    print(message)
+                    resp=yoga(message)
+                    time.sleep(10)
+                    messangerbot("Do you need further yoga remedy or do you need ayurvedic or product suggestion or you are done and want to say bye to Ayur ")
+                    currentstate=2
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user,resp, "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+                elif currentstate==5:
+                    processing()
+                    print(message)
+                    resp=product(message)
+                    time.sleep(10)
+                    messangerbot("Do you need further product recomm or do you need ayurvedic or yoga poses or you are done and want to say bye to Ayur ")
+                    currentstate=2
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user, resp, "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+
+                elif currentstate==10:
+                    messangerbot("Thanks for using our Bot!")
+                    currentstate=-999
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user, "Thanks for using our Bot! ", "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+                    
+
+            elif currentstate==3:#ayurvedic
+                    processing()
+                    message=UserQuery.objects.filter(phone_no_from=phone_no_from,currentstate=2).order_by('-message_internal_id').first().user_message
+                    resp=ayurved(message)
+                    time.sleep(10)
+                    messangerbot("Do you need further ayurvedic remedy or do you need yoga poses or product suggestion or you are done and want to say bye to Ayur "
+                    )
+                    currentstate=2
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user, resp, "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)    
+            elif currentstate==4:
+                    processing()
+                    message=UserQuery.objects.filter(phone_no_from=phone_no_from,currentstate=2).order_by('-message_internal_id').first().user_message
+                    resp=yoga(message)
+                    time.sleep(10)
+                    messangerbot("Do you need further yoga remedy or do you need ayurvedic or product suggestion or you are done and want to say bye to Ayur "
+                    )
+                    currentstate=2
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user, resp, "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
+            elif currentstate==5:
+                    processing()
+                    message=UserQuery.objects.filter(phone_no_from=phone_no_from,currentstate=2).order_by('-message_internal_id').first().user_message
+                    resp=product(message)
+                    time.sleep(10)
+                    messangerbot("Do you need further product recomm or do you need ayurvedic or yoga poses or you are done and want to say bye to Ayur "
+                    )
+                    currentstate=2
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user, resp, "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)      
+
+            elif currentstate==10:
+                    messangerbot("Thanks for using our Bot!"     )
+                    currentstate=-999
+                    gist_response = gist()
+                    update_database_and_sheet(message_from_user, "Thank you Message", "None", response_message_segregation,
+                                            phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)    
+
+            # elif response_message_segregation.lower() == "query":
+            #     processing()
+            #     doctor_response = doctor()
+            #     product_response = product()
+            #     gist_response = gist()
+            #     update_database_and_sheet(message_from_user, doctor_response, product_response, response_message_segregation,
+            #                             phone_no_from, profile_name, gist_response, message_count, sheet)
+            #     print("success")
+            # elif response_message_segregation.lower() == "feedback":
+            #     gist_response = gist()
+            #     message_reply = client.messages.create(
+            #     from_='whatsapp:+14155238886',
+            #     to=f"whatsapp:{phone_no_from}",
+            #     body="Thanks for using our Bot!"
+            #     )
+            #     update_database_and_sheet(message_from_user, "None", "None", response_message_segregation,
+            #                             phone_no_from, profile_name, gist_response, message_count, sheet)
+    
+        pipeline()
+        return HttpResponse(status=200)
+    except json.JSONDecodeError:
+            return HttpResponse(status=400)

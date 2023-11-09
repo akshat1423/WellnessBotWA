@@ -17,10 +17,12 @@ class UserQuery(models.Model):
     message_count = models.IntegerField(default=1)
     class Meta:
         app_label = 'bot'
+    currentstate = models.IntegerField(default=0)
 
 class UserGist(models.Model):
     phone_no_from= models.TextField()
     gist = models.TextField()
+    currentstate = models.IntegerField(default=0)
     created_at = models.DateTimeField(default=timezone.now)
     class Meta:
         app_label = 'bot'
