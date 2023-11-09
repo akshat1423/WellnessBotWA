@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from django.utils import timezone
+
 
 # Create your models here.
 
@@ -26,3 +28,4 @@ class UserGist(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     class Meta:
         app_label = 'bot'
+

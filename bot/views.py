@@ -94,7 +94,7 @@ def get_completion_from_messages(messages,
         model=model,
         messages=messages,
         temperature=temperature, # this is the degree of randomness of the model's output
-        max_tokens=max_tokens, # the maximum number of tokens the model can ouptut
+        max_tokens=max_tokens, # the maximum number of tokens the model can ouptut 
     )
         return response.choices[0].message["content"]
 def split_string(text, chunk_size=1300):
@@ -156,10 +156,6 @@ def bot(request):
         # # hell=bodyy("object")
         # # print(hell)
         
-
-       
-        
-
         #initialisation
         message_from_user = "None"
         doctor_response = "None"  # Initialize with a default value
@@ -221,33 +217,17 @@ def bot(request):
         message_from_user = bodyy['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
         profile_name = bodyy['entry'][0]['changes'][0]['value']['contacts'][0]['profile']['name']
         chunk_size = 1350
+        phone_no_from="917990565567"
         
-        # print(phone_no_from)
-    #     response = messenger.send_message(
-    #     message="https://www.youtube.com/watch?v=K4TOrB7at0Y",
-    #     recipient_id="917990565567",
-    # )
-        # def messanger(body):
-        #     message_reply = client.messages.create(
-        #             from_='whatsapp:+14155238886',
-        #             to=f"whatsapp:{phone_no_from}",
-        #             body=body
-        #             )
-        #     return message_reply.sid 
         def messangerbot(body):
             response = messenger.send_message(
             message=(body),
             recipient_id="917990565567",
     )
         def intro():
-            messangerbot(f"🌿 Welcome to G.O.A.T, {profile_name} your go-to Wellness and Health Bot! 🤖\n🌱 We specialize in Herbal and Ayurvedic solutions, offering you a path to complete natural wellness. 🌼\n What's troubling you today?")
-                    # body=f"Welcome to the Health and Wellness Assistant! To assist you better, may I know your name, please?"
+            messangerbot(f"🌿 Welcome to A.Y.U.R , {profile_name} your go-to Wellness and Health Bot! 🤖\n🌱 We specialize in Herbal and Ayurvedic solutions, offering you a path to complete natural wellness. 🌼\n What's troubling you today?")
         def processing():
-            message1 = client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=f"whatsapp:{phone_no_from}",
-                body=f"🌿 We're brewing up some herbal wisdom for you! 🍵 Please hang tight while we find the perfect natural solution for your wellness query. 🌱✨"
-            )
+           messangerbot("🌿 We're brewing up some herbal wisdom for you! 🍵 Please hang tight while we find the perfect natural solution for your wellness query. 🌱✨")
         def short_message():
             message_error = client.messages.create(
                     from_='whatsapp:+14155238886',
@@ -268,19 +248,13 @@ def bot(request):
                 response_doctor = get_completion_from_messages(messages_doctor, temperature=1)
                 if len(response_doctor) <= 1300:
                     break  # Exit the loop if the response is within the character limit
-
-
             # Combine header and response
             header_response_doctor="✨🌿 *This is the Answer from our Ayurvedic Bot:* 🌱✨\n\n"
             response_doctor_splitted = split_string(response_doctor, chunk_size)
             combined_response_doctor=header_response_doctor+response_doctor_splitted[0]
             print(combined_response_doctor)
             # Send the WhatsApp message
-            messages_doctor = client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=f"whatsapp:{phone_no_from}",
-                body=combined_response_doctor
-            )
+            messangerbot(combined_response_doctor)
 
             return combined_response_doctor 
         def ayurved(message):
@@ -296,20 +270,12 @@ def bot(request):
                 print("doctor")
                 response_doctor = get_completion_from_messages(messages_doctor, temperature=1)
                 if len(response_doctor) <= 1300:
-                    break  # Exit the loop if the response is within the character limit
-
-
-            # Combine header and response
+                    break 
             header_response_doctor="✨🌿 *This is the Answer from our Ayurvedic Bot:* 🌱✨\n\n"
             response_doctor_splitted = split_string(response_doctor, chunk_size)
             combined_response_doctor=header_response_doctor+response_doctor_splitted[0]
             print(combined_response_doctor)
-            # Send the WhatsApp message
-            messages_doctor = client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=f"whatsapp:{phone_no_from}",
-                body=combined_response_doctor
-            )
+            messangerbot(combined_response_doctor )
 
             return combined_response_doctor
         def yoga(message):
@@ -325,36 +291,15 @@ def bot(request):
                 print("doctor")
                 response_doctor = get_completion_from_messages(messages_doctor, temperature=1)
                 if len(response_doctor) <= 1300:
-                    break  # Exit the loop if the response is within the character limit
-
-
-            # Combine header and response
+                    break  
             header_response_doctor="✨🌿 *This is the Answer from our Yoga Bot:* 🌱✨\n\n"
             response_doctor_splitted = split_string(response_doctor, chunk_size)
             combined_response_doctor=header_response_doctor+response_doctor_splitted[0]
             print(combined_response_doctor)
-            # Send the WhatsApp message
-            messages_doctor = client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=f"whatsapp:{phone_no_from}",
-                body=combined_response_doctor
-            )
+            messangerbot(combined_response_doctor)
 
             return combined_response_doctor
         def product(message):
-            # messages_product_approve =  [
-            # {'role':'system',
-            # 'content':"""Can this query be answered by this - Answer in just "yes" or "no" -  Query which a bot based on the intellect of anceint medicine practitioner , your skills include Ayurvedic Doctor , Yoga Teacher, Nutritionalist / Dietician , Gym Trainer  can reply  """},
-            # {'role':'user',
-            # 'content':f"""{message_from_user}"""},
-            # ]
-            # response_product_approve = get_completion_from_messages(messages_product_approve, temperature=1)
-            # message_product = client.messages.create(
-            #         from_='whatsapp:+14155238886',
-            #         to=f"whatsapp:{phone_no_from}",
-            #         body=response_product_approve
-            #     )
-            # if 'yes' in response_product_approve:
             messages_product =  [
                     {'role':'system',
                     'content':f"""{product_message_prompt}"""},
@@ -362,24 +307,11 @@ def bot(request):
                     'content':f"""Suggest me some food items because {message} also send me ingredients with their links to buy within 60 words"""},
                     ]
             combined_response_product=""
-            # while True:
             response_product = get_completion_from_messages(messages_product, temperature=1)
-                # Check if 'www.kisanwindow' is in the response
-            print("product")
-            # if ('www.kisanwindow' in response_product or 'qtrove.com' in response_product or 'amazon' in response_product) and (len(response_product) <= 1300) :
-            # Split and combine the response if needed
             header_response_product="🌿🌼 *These are the herbal products we suggest for your path to wellness:* 🌱💚\n\n"
             response_product_splitted = split_string(response_product, chunk_size)
             combined_response_product = header_response_product + response_product_splitted[0]
-
-            # Send the WhatsApp message
-            message_product = client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=f"whatsapp:{phone_no_from}",
-                    body=combined_response_product
-                )
-            # else:
-            #     combined_response_product="User Gave a question irrelevant to our BOT"
+            messangerbot(combined_response_product)
             return combined_response_product
         def gist():
             gist =  [
@@ -437,6 +369,7 @@ def bot(request):
             )
             response = request.execute()
         def pipeline():
+            global currentstate;
             messages_segregation =  [
                 {'role':'system',
                 'content':"""intention : "what user wants to do from the following category(respond in one word) : "is the user asking a query about is health ? then say "query"/(if want to know about platform or feels new user say = know)/"want to give feedback or exit or has finished with his questions say feedback/short(if less then 10 characters)""  """},
@@ -444,35 +377,30 @@ def bot(request):
                 'content':f"""{message_from_user}"""},
                 ]
             response_message_segregation = get_completion_from_messages(messages_segregation, temperature=1)
-            print(response_message_segregation)
-            
-
-
-            # Check if the phone number has sent messages before
 
             existing_query = UserQuery.objects.filter(phone_no_from=phone_no_from).first()
-
-            # Prepare reply based on the existing query
             if existing_query:
                 existing_query.message_count += 1
                 message_count = existing_query.message_count
                 existing_query.save()
+                
             else:
-                message_count=2
+                message_count=1
                 reply = ("🎉 Heyyya! "+profile_name+", 🌟 Welcome to our Platform! 🎊\n"
                         "👋 We're *THRILLED* you're here!\n"
                         "💡 Ready to explore something AMAZING? We've got a universe of cool stuff just waiting for you. 🌌\n"
                         "👇 So what are you waiting for? Dive in and let's make some magic happen! 🎩\n"
                         "👉 What's troubling you today?📝")
                 messangerbot(reply)
+                gist_response = gist()
+                currentstate=-999
+                update_database_and_sheet(message_from_user, "FIRST MESSAGE", "None", response_message_segregation,
+                                        phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
                 
-
-            global currentstate;
             if UserQuery.objects.filter(phone_no_from=phone_no_from).order_by('-message_internal_id').first().currentstate:
                 currentstate=UserQuery.objects.filter(phone_no_from=phone_no_from).order_by('-message_internal_id').first().currentstate
             else:
                 currentstate=-999  
-            print("now",currentstate)
 
             # if (len(message_from_user) < 10) or response_message_segregation.lower() == "short":
             #     short_message()
@@ -488,8 +416,14 @@ def bot(request):
 
             elif (currentstate==-999 or currentstate==0):
                 intro()
+                print((message_from_user, "None", "None", response_message_segregation,
+                                        phone_no_from, profile_name, "gist_response", message_count, sheet, currentstate))
+
                 gist_response = gist()
                 currentstate=1
+
+                print((message_from_user, "None", "None", response_message_segregation,
+                                        phone_no_from, profile_name, "gist_response", message_count, sheet, currentstate))
                 update_database_and_sheet(message_from_user, "None", "None", response_message_segregation,
                                         phone_no_from, profile_name, gist_response, message_count, sheet, currentstate)
             elif currentstate==1:

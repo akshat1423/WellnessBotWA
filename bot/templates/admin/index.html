@@ -1,0 +1,28 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block extrahead %}
+    <script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+    <h1>Dashboard</h1>
+    <canvas id="myChart" width="400" height="200"></canvas>
+    <script>
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ chart.labels|safe }},
+                datasets: [{
+                    label: 'User Queries',
+                    data: {{ chart.datasets.0.data|safe }},
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false,
+                }]
+            },
+        });
+    </script>
+    {{ block.super }}
+{% endblock %}
