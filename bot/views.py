@@ -22,7 +22,7 @@ from django.conf import settings
 import jsonify
 from heyoo import WhatsApp
 
-messenger = WhatsApp(token="EAAMHMentXhsBO4YpKleEZCbMIYVVjoyzHnMN2UqvtMbZB8ZCwWe1KOrTEkqux5LOgALRqqaYFFMfu78FDfZCXqZBK3ZCqY5HZCsZCADjgmrcqICsfeuvuY23xjgscgxwfSKAIbeP5MwtGMX8BZAk7jqFZBCkZCuZCjCevIVqvit0ZCt8TZAgO1vOgBUWr7pgr2PkBEvZCuyKlaCctQ2XAsqfLPUl2O5t1Kp9JcZD",phone_number_id="138583586012407")
+messenger = WhatsApp(token="",phone_number_id="")
 
 
 
@@ -69,13 +69,7 @@ def queries_over_time(request):
     response = HttpResponse(content_type="image/png")
     plt.savefig(response, format="png")
     return response
-openai.api_key = "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"
-#Development Account
-# account_sid = 'AC359100564d47ce122c997e907f9dc800'
-# auth_token = '7472723ba5f6ffd13476c8bdcd4860c6'
-#Production Account
-# account_sid='ACa11021a29ca5245213d79d5b4b970fa3'
-# auth_token='0a0166c99295675905b95272370c8b45'
+openai.api_key = ""
 # client = Client(account_sid, auth_token)
 def get_completion(prompt, model="gpt-3.5-turbo"):
         messages = [{"role": "user", "content": prompt}]
